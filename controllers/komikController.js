@@ -1,40 +1,79 @@
-async function createKomik(database, komikData) {
-    const { title, description, author, imageType, imageName, imageData } = komikData;
+// controllers/komikController.js
+const db = require('../../models');
+const komikService = require('../../services/komikService');
 
-    if (!title || !description || !author) {
-        throw new Error('Title, description, dan author wajib diisi');
+async function createKomik(req, res) {
+  try {
+    const komikData = req.body;
+
+    if (req.file) {
+      komikData.imageType = req.file.mimetype;
+      komikData.imageName = req.file.originalname;
+      komikData.imageData = req.file.buffer;
     }
 
-    const newKomik = await database.Komik.create({
-        title,
-        description,
-        author,
-        imageType: imageType || null,
-        imageName: imageName || null,
-        imageData: imageData || null,
-    });
-
-    return newKomik;
+    const result = await komikService.createKomik(db, komikData);
+    res.status(201).json({ success: true, data: result });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
 }
 
-async function getAllKomik(database) {
-    const komiks = await database.Komik.findAll();
-
-    return komiks.map(k => {
-        if (k.imageData) {
-            k.imageData = k.imageData.toString('base64');
-        }
-        return k;
+async function getAllKomik(req, res) {
+  try {
+    const result = await komikService.getAllKomik(db);
+    res.status(200).json({
+      success: true,
+      data: result,
     });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
 }
 
-async function getKomikById(database, id) {
-    const komik = await database.Komik.findByPk(id);
-    if (!komik) throw new Error('Komik tidak ditemukan');
+async function getKomikById(req, res) {
+  try {
+    const { id } = req.params;
+    const result = await komikService.getKomikById(db, id);
+    res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    res.status(404).json({ success: false, error: error.message });
+  }
+}
 
-    if (komik.imageData) {
-        komik.imageData = komik.imageData.toString('base64');
+async function updateKomik(req, res) {
+  try {
+    const komikData = req.body;
+
+    if (req.file) {
+      komikData.imageType = req.file.mimetype;
+      komikData.imageName = req.file.originalname;
+      komikData.imageData = req.file.buffer;
     }
 
-    return komik;
+    const result = await komikService.updateKomik(db, req.params.id, komikData);
+    res.json({ success: true, data: result });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
 }
+
+async function deleteKomik(req, res) {
+  try {
+    const result = await komikService.deleteKomik(db, req.params.id);
+    res.json({ success: true, message: result.message });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+}
+
+module.exports = {
+  createKomik,
+  getAllKomik,
+  getKomikById,
+  updateKomik,
+  deleteKomik,
+};
